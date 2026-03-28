@@ -4,25 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Külliyat Takip</title>
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkt1bGxpeWF0IFRha2lwIiwKICAic2hvcnRfbmFtZSI6ICJLdWxsaXlhdCIsCiAgInN0YXJ0X3VybCI6ICIuL2luZGV4Lmh0bWwiLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiNmZGZhZjEiLAogICJ0aGVtZV9jb2xvciI6ICIjNmI3MDVjIgp9">
+    
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root { --bg-cream: #fdfaf1; --deep-green: #6b705c; --soft-brown: #b7b7a4; --table-bg: #ffffff; --text-color: #3f4238; }
         body { font-family: 'Quicksand', sans-serif; background-color: var(--bg-cream); margin: 0; padding: 10px; padding-bottom: 90px; color: var(--text-color); }
         
-        /* YARDIMCI PANEL */
-        .helper-box {
-            background: var(--deep-green); color: white; padding: 15px;
-            border-radius: 15px; margin-bottom: 20px; text-align: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        /* ÜSTTEKİ YÜKLEME BARI */
+        .install-header {
+            display: none; /* Sadece yüklenebilirse JavaScript ile açılacak */
+            justify-content: space-between; align-items: center;
+            background: var(--deep-green); color: white; padding: 12px 15px;
+            border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        .helper-box b { display: block; margin-bottom: 8px; font-size: 14px; }
-        .helper-box p { font-size: 11px; margin: 0; opacity: 0.9; line-height: 1.4; }
+        #installBtn {
+            background: #fdfaf1; color: var(--deep-green); border: none;
+            padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px;
+        }
 
         .container { max-width: 600px; margin: auto; background: var(--table-bg); padding: 15px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h2 { text-align: center; color: var(--deep-green); font-size: 18px; margin: 10px 0; }
+        h2 { text-align: center; color: var(--deep-green); font-size: 19px; margin: 10px 0; }
         table { width: 100%; border-collapse: separate; border-spacing: 0 5px; }
         th { background-color: var(--deep-green); color: white; padding: 12px; font-size: 13px; border-radius: 8px; }
-        td { padding: 12px; text-align: center; background-color: #fff; border-bottom: 1px solid #f4f1de; font-size: 12px; }
+        td { padding: 12px; text-align: center; background-color: #fff; border-bottom: 1px solid #f4f1de; font-size: 13px; }
         .gorev-hucre { text-align: left; font-weight: 600; border-left: 4px solid var(--soft-brown); padding-left: 12px !important; }
         input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--deep-green); cursor: pointer; }
         
@@ -31,14 +36,15 @@
             width: 90%; max-width: 400px; background: rgba(107, 112, 92, 0.95);
             color: white; padding: 12px 25px; border-radius: 30px;
             display: flex; justify-content: space-between; align-items: center; font-size: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 1000;
         }
     </style>
 </head>
 <body>
 
-<div class="helper-box">
-    <b>📲 Uygulama Olarak Kullan</b>
-    <p>Masaüstüne eklemek için tarayıcınızın ayarlarından (sağ üstteki 3 nokta veya paylaş butonu) <b>"Ana Ekrana Ekle"</b> seçeneğine tıklayın.</p>
+<div id="installBanner" class="install-header">
+    <span>📲 Ana Ekrana Ekle</span>
+    <button id="installBtn">Yükle</button>
 </div>
 
 <div class="container">
@@ -50,11 +56,38 @@
 </div>
 
 <div class="progress-fixed">
-    <span>Gün: <b id="tamamlanangun">0</b>/120</span>
+    <span>Tamamlanan: <b id="tamamlanangun">0</b>/120</span>
     <span>%<b id="yuzde">0</b></span>
 </div>
 
 <script>
+    // 1. SERVICE WORKER KAYDI (Yükle butonu için şart)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').then(() => {
+            console.log("Uygulama hazır!");
+        });
+    }
+
+    // 2. YÜKLEME BUTONU MANTIĞI
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('installBanner').style.display = 'flex';
+    });
+
+    document.getElementById('installBtn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                document.getElementById('installBanner').style.display = 'none';
+            }
+            deferredPrompt = null;
+        }
+    });
+
+    // 3. TABLO OLUŞTURMA (Sabit 31 Sayfa + 38/55 Kuralı)
     const kitaplar = [
         { ad: "Sözler", s: 792 }, { ad: "Barla Lâhikası", s: 384 },
         { ad: "Mektubat", s: 524 }, { ad: "Kastamonu Lâhikası", s: 268 },
