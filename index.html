@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Külliyat Takip</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-cream: #fdfaf1; --deep-green: #6b705c; --soft-brown: #b7b7a4; --table-bg: #ffffff; --text-color: #3f4238; }
+        body { font-family: 'Quicksand', sans-serif; background-color: var(--bg-cream); margin: 0; padding: 10px; padding-bottom: 90px; color: var(--text-color); }
+        
+        /* YARDIMCI PANEL */
+        .helper-box {
+            background: var(--deep-green); color: white; padding: 15px;
+            border-radius: 15px; margin-bottom: 20px; text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .helper-box b { display: block; margin-bottom: 8px; font-size: 14px; }
+        .helper-box p { font-size: 11px; margin: 0; opacity: 0.9; line-height: 1.4; }
+
+        .container { max-width: 600px; margin: auto; background: var(--table-bg); padding: 15px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: var(--deep-green); font-size: 18px; margin: 10px 0; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0 5px; }
+        th { background-color: var(--deep-green); color: white; padding: 12px; font-size: 13px; border-radius: 8px; }
+        td { padding: 12px; text-align: center; background-color: #fff; border-bottom: 1px solid #f4f1de; font-size: 12px; }
+        .gorev-hucre { text-align: left; font-weight: 600; border-left: 4px solid var(--soft-brown); padding-left: 12px !important; }
+        input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--deep-green); cursor: pointer; }
+        
+        .progress-fixed {
+            position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 400px; background: rgba(107, 112, 92, 0.95);
+            color: white; padding: 12px 25px; border-radius: 30px;
+            display: flex; justify-content: space-between; align-items: center; font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="helper-box">
+    <b>📲 Uygulama Olarak Kullan</b>
+    <p>Masaüstüne eklemek için tarayıcınızın ayarlarından (sağ üstteki 3 nokta veya paylaş butonu) <b>"Ana Ekrana Ekle"</b> seçeneğine tıklayın.</p>
+</div>
+
+<div class="container">
+    <h2>📕 120 Günlük Külliyat Programı</h2>
+    <table>
+        <thead><tr><th>Günlük Görev</th><th>Tamam</th></tr></thead>
+        <tbody id="programListesi"></tbody>
+    </table>
+</div>
+
+<div class="progress-fixed">
+    <span>Gün: <b id="tamamlanangun">0</b>/120</span>
+    <span>%<b id="yuzde">0</b></span>
+</div>
+
+<script>
+    const kitaplar = [
+        { ad: "Sözler", s: 792 }, { ad: "Barla Lâhikası", s: 384 },
+        { ad: "Mektubat", s: 524 }, { ad: "Kastamonu Lâhikası", s: 268 },
+        { ad: "Lemalar", s: 450 }, { ad: "Emirdağ Lâhikası", s: 535 },
+        { ad: "Şualar", s: 764 }
+    ];
+
+    const gunlukSayfa = 31;
+    const hedefGun = 120;
+    const istisnaGunler = [38, 55];
+    let mevcutKitapIdx = 0;
+    let sayfaCursor = 1;
+    const liste = document.getElementById('programListesi');
+
+    for (let gun = 1; gun <= hedefGun; gun++) {
+        let bugunkuGorev = "";
+        let kalanHak = gunlukSayfa;
+        while (kalanHak > 0 && mevcutKitapIdx < kitaplar.length) {
+            let kitap = kitaplar[mevcutKitapIdx];
+            let kitaptaKalan = kitap.s - (sayfaCursor - 1);
+            if (istisnaGunler.includes(gun) && bugunkuGorev !== "" && kalanHak > 0) break;
+            let okunan = Math.min(kalanHak, kitaptaKalan);
+            let bas = sayfaCursor;
+            let bit = sayfaCursor + okunan - 1;
+            bugunkuGorev += `${kitap.ad} (${bas}-${bit}) `;
+            sayfaCursor += okunan;
+            kalanHak -= okunan;
+            if (sayfaCursor > kitap.s) { mevcutKitapIdx++; sayfaCursor = 1; }
+        }
+        let satir = document.createElement('tr');
+        satir.innerHTML = `<td class="gorev-hucre"><small style="color:var(--soft-brown)">${gun}. GÜN</small><br>${bugunkuGorev}</td><td><input type="checkbox" id="g-${gun}" onchange="guncelle()"></td>`;
+        liste.appendChild(satir);
+    }
+
+    function guncelle() {
+        const chks = document.querySelectorAll('input[type="checkbox"]');
+        let say = 0;
+        chks.forEach(c => {
+            localStorage.setItem(c.id, c.checked);
+            if(c.checked) say++;
+        });
+        document.getElementById('tamamlanangun').innerText = say;
+        document.getElementById('yuzde').innerText = Math.round((say / hedefGun) * 100);
+    }
+
+    window.onload = () => {
+        document.querySelectorAll('input[type="checkbox"]').forEach(c => {
+            if(localStorage.getItem(c.id) === "true") c.checked = true;
+        });
+        guncelle();
+    };
+</script>
+</body>
+</html>
